@@ -16,4 +16,32 @@
 \maketitle
 
 \section{Intro}
+In the forward view of RL we imagine we're in some state $S_t$, we take some action $a_t$, receive some reward $R_t$,
+and land in some new state $S_{t+1}$.
+
+$\text{TD}(0)$ says that we should update $V(S_t)$ to be equal to $V(S_t) + \alpha (G_t - V(S_t))$ where the \emph{TD target}
+at step $t$ is $G_t = R_t + \gamma V(S_{t+1})$.
+
+We can, however, also use $n$-step rewards with $n>1$. For example, with $n=2$ we would have
+$G^1_t = R_t + \gamma R_{t+1} + \gamma^2 V(S_{t+2})$.
+
+In general the $n$-step return would be $G^n_t = \gamma^n V(S_{t+n}) + \sum_{k=0}^{n - 1} \gamma^k R_{t+k}$.
+So which $n$ is best? We could use $1$, as in $\text{TD}(0)$, or we could use $\infty$ and do full Monte Carlo backups.
+Instead, we can generalize to use $\text{TD}(\lambda)$ which weights all the targets using an expontentially decreasing
+weighting with ratio $\lambda$: $G_t = (1-\lambda) \sum_{i=1}^{\infty} \lambda^{i-1}G^i_t$.
+Note that the extra factor of $1 - \lambda$ serves to normalize the weights such that $(1 - \lambda) \sum_{i=1} \lambda^{i-1} = 1$.
+
+Also note that when an episode ends, the last $G_T$ should receive all remaining weight.
+I need to go back and figure out how this works mathematically.
+
+This is the forward view of $\text{TD}(\lambda)$.
+It works fine, but it has the problem that we can't do online updates; we must wait until the end of an episode to be able to compute $G_t$.
+Instead we would like to work out the backward view of the same alrgorithm.
+Instead of updating $V(S_t)$ w.r.t. all the future rewards $R_{t+k}$,
+we instead update all previous states whenever we receive a reward.
+We simply need to work out what the correct update is to each previous state $S_{t -k}$ w.r.t. a current reward $R_t$.
+This should just be simple algebra, so I will work it out here.
+
+Gwar.
+
 \end{document}
