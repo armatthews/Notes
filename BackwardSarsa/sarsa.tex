@@ -20,10 +20,10 @@ In the forward view of RL we imagine we're in some state $S_t$, we take some act
 and land in some new state $S_{t+1}$.
 
 $\text{TD}(0)$ says that we should update $V(S_t)$ to be equal to $V(S_t) + \alpha (G_t - V(S_t))$ where the \emph{TD target}
-at step $t$ is $G_t = R_t + \gamma V(S_{t+1})$.
+at step $t$ is $G^1_t = R_t + \gamma V(S_{t+1})$.
 
 We can, however, also use $n$-step rewards with $n>1$. For example, with $n=2$ we would have
-$G^1_t = R_t + \gamma R_{t+1} + \gamma^2 V(S_{t+2})$.
+$G^2_t = R_t + \gamma R_{t+1} + \gamma^2 V(S_{t+2})$.
 
 In general the $n$-step return would be $G^n_t = \gamma^n V(S_{t+n}) + \sum_{k=0}^{n - 1} \gamma^k R_{t+k}$.
 So which $n$ is best? We could use $1$, as in $\text{TD}(0)$, or we could use $\infty$ and do full Monte Carlo backups.
@@ -33,6 +33,7 @@ Note that the extra factor of $1 - \lambda$ serves to normalize the weights such
 
 Also note that when an episode ends, the last $G_T$ should receive all remaining weight.
 I need to go back and figure out how this works mathematically.
+If the final reward is $R_{t+k}$ then the last weight should be 1 - $\sum_{i=0}^{k - 1} (1 - \lambda) \lambda^i = \lambda^k$.
 
 This is the forward view of $\text{TD}(\lambda)$.
 It works fine, but it has the problem that we can't do online updates; we must wait until the end of an episode to be able to compute $G_t$.
@@ -42,6 +43,41 @@ we instead update all previous states whenever we receive a reward.
 We simply need to work out what the correct update is to each previous state $S_{t -k}$ w.r.t. a current reward $R_t$.
 This should just be simple algebra, so I will work it out here.
 
-Gwar.
+Let's expand the definition of the overall $G_t$:
+
+\begin{align*}
+G_t &= (1-\lambda) \sum_{i=1}^{\infty} \lambda^{i-1}G^i_t \\
+&= (1-\lambda) \sum_{i=1}^{\infty} \lambda^{i-1} \big[ \gamma^i V(S_{t+i}) + \sum_{k=0}^{i - 1} \gamma^k R_{t+k} \big] \\
+&= (1-\lambda) \sum_{i=1}^{\infty} \big[ \lambda^{i-1} \gamma^i V(S_{t+i}) + \lambda^{i-1}\sum_{k=0}^{i - 1} \gamma^k R_{t+k} \big] \\
+&= \frac{(1-\lambda)}{\lambda} \sum_{i=1}^{\infty} \big[ (\lambda \gamma)^i V(S_{t+i}) + \lambda^{i}\sum_{k=0}^{i - 1} \gamma^k R_{t+k} \big] \\
+&= \frac{(1-\lambda)}{\lambda} \sum_{i=1}^{\infty} (\lambda \gamma)^i V(S_{t+i}) + \sum_{i=1}^{\infty} (1 - \lambda) \lambda^{i - 1}\sum_{k=0}^{i - 1} \gamma^k R_{t+k} \\
+&= \frac{(1-\lambda)}{\lambda} \sum_{i=1}^{\infty} (\lambda \gamma)^i V(S_{t+i}) + \sum_{k=0}^\infty \big[ \sum_{i=k}^\infty (1 - \lambda)\lambda^i \big]\gamma^k R_{t+k} \\
+\end{align*}
+
+Note that this means that each $\gamma^k R_{t+k}$ term will be added in for all $i \geq k$.
+Alternatively we might look at as it will be skipped only when $i < k$.
+This means that $\gamma^k R_{t+k}$ will be added in with a total weight of $1 - \sum_{i=0}^{k - 1} (1 - \lambda) \lambda^{i} = \lambda^k$
+
+\begin{align*}
+&= \frac{(1-\lambda)}{\lambda} \sum_{i=1}^{\infty} (\lambda \gamma)^i V(S_{t+i}) + \sum_{k=0}^\infty \lambda^k \gamma^k R_{t+k} \\
+&= \frac{(1-\lambda)}{\lambda} \sum_{i=1}^{\infty} (\lambda \gamma)^i V(S_{t+i}) + \sum_{k=0}^\infty (\lambda \gamma)^k R_{t+k} \\
+&= R_t + \sum_{k=1}^{\infty} (\lambda \gamma)^k \bigg(\big(\frac{1 - \lambda}{\lambda}\big)V(S_{t+k}) + R_{t+k} \bigg) \\
+\end{align*}
+
+So the total update done to $V(S_t)$ is:
+
+\begin{align*}
+\Delta V(S_t) &= \alpha\big(G_t - V(S_t)\big) \\
+&= \alpha\Big(R_t - V(S_t) + \sum_{k=1}^{\infty} (\lambda \gamma)^k \bigg(\big(\frac{1 - \lambda}{\lambda}\big)V(S_{t+k}) + R_{t+k} \bigg) \Big) \\
+&= \alpha\big(R_t - V(S_t) \big) + \alpha \sum_{k=1}^{\infty} (\lambda \gamma)^k \bigg(\big(\frac{1 - \lambda}{\lambda}\big)V(S_{t+k}) + R_{t+k} \bigg)  \\
+\end{align*}
+
+So upon departing state $S_t$ and receiving reward $R_t$ we can immediately update $V(S_t)$ by $\alpha\big(R_t - V(S_t)\big)$.
+Then from then on, whenever we leave state $S_{t+k}$ and receive reward $R_{t +k}$ we again update $V(S_t)$ by
+$\alpha (\lambda \gamma)^k \bigg(\big(\frac{1 - \lambda}{\lambda}\big)V(S_{t+k}) + R_{t+k} \bigg)$.
+
+When we end an episode at state $S_{t+k}$ then $V(S_{t+k})$ is trivially 0.
+We also upweight the update by $\frac{1}{1 - \lambda}$, giving all remaining weight to this update.
+Thus the update becomes $\frac{\alpha}{1 - \lambda} (\lambda \gamma)^k R_{t+k}$
 
 \end{document}
