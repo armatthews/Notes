@@ -3,6 +3,7 @@ import math
 import random
 import signal
 from collections import defaultdict
+from windy_grid_draw import draw
 
 import signal
 import sys
@@ -23,11 +24,13 @@ gamma = 0.9 # future discounting
 lamda = 0.9 # TD(lambda)
 
 def ctrlc_handler(signal, frame):
+  possible_actions = ['left', 'right', 'up', 'down']
   for y in range(6, -1, -1):
     for x in range(10):
       greedy_action = max(possible_actions, key=lambda action: agent.qvalues[(x, y), action])
       print greedy_action[0],
     print
+  draw(agent.qvalues)
   sys.exit(0)
 signal.signal(signal.SIGINT, ctrlc_handler)
 
