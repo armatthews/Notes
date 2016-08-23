@@ -80,4 +80,32 @@ When we end an episode at state $S_{t+k}$ then $V(S_{t+k})$ is trivially 0.
 We also upweight the update by $\frac{1}{1 - \lambda}$, giving all remaining weight to this update.
 Thus the update becomes $\frac{\alpha}{1 - \lambda} (\lambda \gamma)^k R_{t+k}$
 
+\section{Another try}
+Let's define $G^0_t = V(S_t)$.
+At each timestep $t + n$ let's do a full update towards $G^n_t$.
+Then when we progress to the next time step we'll undo a fraction of that update as we perform the update towards $G^{n+1}_t$.
+
+As of time step $t + n$ the total weight used so far is
+
+\begin{align*}
+\sum_{k=1}^n (1 - \lambda) \lambda^{k - 1} &= (1 - \lambda) \big[ \sum_{k=1}^\infty \lambda^{k - 1} - \sum_{k=n+1}^\infty \lambda^{k - 1} \big] \\
+&= (1 - \lambda) \big[ \frac{1}{1 - \lambda} - \frac{\lambda^n}{1 - \lambda} \big] \\
+&= 1 - \lambda^n
+\end{align*}
+
+which means the remaining weight is $\lambda^n$.
+
+Consider the quantity
+
+\begin{align*}
+\sum_{n=1}^\infty \lambda^{n-1} (G^n_t - G^{n-1}_t) &= (G^1_t - G^0_t) + \lambda (G^2_t - G^1_t) + \lambda^2 (G^3_t - G^2_t) + \dots \\
+&= -G^0_t + (1 - \lambda)G^1_t + (\lambda - \lambda^2)G^2_t + (\lambda^2 - \lambda^3)G^3_t + \dots \\
+&= -G^0_t + (1 - \lambda)G^1_t + (1 - \lambda)\lambda G^2_t + (1 - \lambda)\lambda^2 G^3_t + \dots \\
+&= -G^0_t + (1 - \lambda)\sum_{n=1}^\infty \lambda^{n - 1} G^n_t \\
+&= -G^0_t + G_t = G_t - V(S_t)
+\end{align*}
+
+and of course the update we want to do is $V(S_t) \leftarrow V(S_t) + \alpha\big(G_t - V(S_t)\big)$.
+We can now rewrite this as $V(S_t) \leftarrow V(S_t) + \alpha \sum_{n=1}^\infty \lambda^{n-1} (G^n_t - G^{n-1}_t)$.
+
 \end{document}
