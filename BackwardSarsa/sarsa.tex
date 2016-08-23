@@ -108,4 +108,18 @@ Consider the quantity
 and of course the update we want to do is $V(S_t) \leftarrow V(S_t) + \alpha\big(G_t - V(S_t)\big)$.
 We can now rewrite this as $V(S_t) \leftarrow V(S_t) + \alpha \sum_{n=1}^\infty \lambda^{n-1} (G^n_t - G^{n-1}_t)$.
 
+Now let's expand the quantity
+
+\begin{align*}
+G^n_t - G^{n-1}_t &= \big[\gamma^n V(S_{t+n}) + \sum_{k=0}^{n - 1} \gamma^k R_{t+k} \big] - \big[\gamma^{n-1} V(S_{t+n-1}) + \sum_{k=0}^{n - 2} \gamma^k R_{t+k} \big] \\
+&= \gamma^{n-1} (\gamma V(S_{t + n}) - V(S_{t + n - 1})) + \gamma^{n - 1} R_{t + n - 1}  \\
+&= \gamma^{n-1} (R_{t + n - 1} + \gamma V(S_{t + n}) - V(S_{t + n - 1})) \\
+\end{align*}
+
+So now the update is $V(S_t) \leftarrow V(S_t) + \alpha \sum_{n=1}^\infty (\lambda\gamma)^{n-1} \big(R_{t + n - 1} + \gamma V(S_{t + n}) - V(S_{t + n - 1})\big)$.
+
+This now affords us the ability to do the updates online.
+At each timestep we loop over previous states and update their values by $\alpha(\lambda\gamma)^k \big(R_t + \gamma V(S_{t + 1}) - V(S_t) \big)$ where $k$ is the number
+of intervening steps.
+
 \end{document}
