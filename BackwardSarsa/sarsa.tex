@@ -62,6 +62,21 @@ G_t - V(S_t) &= (1-\lambda)\sum_{i=1}^\infty \big[\lambda^{i-1} G^i_t \big] - G^
 This means that at each time step we can simply update $V(s)$ for each previous states $s$ by $(\lambda\gamma)^n\delta^1_t$,
 where $n$ is the number of intervening time steps.
 
+Algorithmically this looks like this:
+\begin{verbatim}
+history = []
+step_count = 0
+while not agent.at_goal():
+  step_count += 1
+  history.append(agent.state())
+  action = agent.choose_action()
+  reward = agent.apply_action(action)
+
+  for i, prev_state in enumerate(history):
+    step_diff = step_count - i
+    V[prev_state] += alpha * pow(lamda * gamma, step_diff) * (reward + gamma * V[agent.state()] - V[history[-1]])
+\end{verbatim}
+
 \section{Old Stuff}
 
 Let's expand the definition of the overall $G_t$:
