@@ -16,12 +16,13 @@
 \maketitle
 
 We want to derive a variational approximation to IBM Model 1 given some bitext $(F, E)$ consisting of $S$ sentence pairs
-of French and English text. We will notate that $|F_s| = M_s$ and $|E_s| = N_s$. The model selects for each target word $e_{s,n}$ an
+of French and English text. We will notate that $|F_s| = M_s$ and $|E_s| = N_s$. (Note: the fast\_align paper uses the opposite defitions of $M$ and $N$.)
+The model selects for each target word $e_{s,n}$ an
 alignment link $a_{s,n}$ in $[1, M_s]$ which indicates that the target word $e$ is generated as a translation of $F_{s,a}$.
 
 This model has two latent variables. The first is the set of alignments $A$, which we will assume have uniform prior over the valid range for each sentence.
 The second is $\Phi$, the \emph{translation table}, which gives the translation probability $p(e|f)$ that a source word $f$ generates a target word $e$.
-We will assume that each $\phi_f$ is a $|V|_E$-dimensional Dirichlet with parameters ${\alpha_f}_e$, all of which are initially set to $\alpha_0$, a hyperparameter.
+We will assume that each $\phi_f$ is a $|V_E|$-dimensional Dirichlet with parameters ${\alpha_f}_e$, all of which are initially set to $\alpha_0$, a hyperparameter.
 
 A plate diagram of this model is below.
 
@@ -59,14 +60,14 @@ A plate diagram of this model is below.
 \draw (2.25, 3.75) -- (4.25, 3.75);
 \draw (4.25, 3.75) -- (4.25, 2.25);
 \draw (4.25, 2.25) -- (2.25, 2.25);
-\node[draw=none] at (3.85, 2.45) {$|V|_F$};
+\node[draw=none] at (3.85, 2.45) {$|V_F|$};
 
 \end{tikzpicture}
 
 Mathematically the model is defined as follows. We assume that $F$ and $E$ (and thus their lengths $M$ and $N$) are observed, and that $\alpha$ is given as a hyperparameter.
 
 \begin{align*}
-\phi_f &\sim \text{Dir}(|V|_E, \alpha_f)\;\text{for}\;f \in V_F \\
+\phi_f &\sim \text{Dir}(|V_E|, \alpha_f)\;\text{for}\;f \in V_F \\
 a_{s,n} &\sim \text{Uniform}(1, M_s) \\
 e_{s,n} &\sim \text{Categorical}(\phi_{F_{s, a_{s, n}}})
 \end{align*}
@@ -122,8 +123,13 @@ From this it's clear that each $\phi_f$ is now a non-symmetric Dirichlet with pa
 This suggests the following simple algorithm for model 1:
 
 \begin{enumerate}
-\item Loop over $s$ and $n$. Align each ${e_s}_n$ to whichever word $f$ in $F_s$ maximizes $\psi({\alpha_f}_e) - \psi(\sum_e {\alpha_f}_e)$.
-\item Use new alignment counts to update $\alpha$
+\item Initialize $\alpha_{f,e}$ to $\alpha_0$ $\forall f, e$
+\item For each iteration:
+\item Initialize $\alpha' = \alpha$
+\item Loop over $s$ and $n$. Let $e = E_{s,n}$. For each source word $f \in F_s$ add $\psi({\alpha_f}_e) - \psi(\sum_{e' \in E_s} {\alpha_f}_e')$ to $\alpha'_{f,e}$.
+\item Update $\alpha = \alpha'$
 \item Repeat until convergence 
 \end{enumerate}
+
+See variational\_ibm1.py for an implementation of this algorithm.
 \end{document}

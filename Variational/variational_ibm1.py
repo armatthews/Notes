@@ -1,4 +1,5 @@
 import sys
+import copy
 import math
 import argparse
 from collections import defaultdict
@@ -15,6 +16,7 @@ tgt_vocab = set()
 src_sents = []
 tgt_sents = []
 
+print >>sys.stderr, 'Reading data from %s' % args.bitext
 with open(args.bitext) as f:
   for line in f:
     src, tgt = line.strip().split('|||')
@@ -30,29 +32,41 @@ with open(args.bitext) as f:
     src_sents.append(src)
     tgt_sents.append(tgt)
 
+print >>sys.stderr, 'Read %d sentences with vocab sizes %d/%d' % (len(src_sents), len(src_vocab), len(tgt_vocab))
+
 alignments = [[None for word in tgt] for tgt in tgt_sents]
 alpha = defaultdict(lambda: defaultdict(lambda: args.alpha0))
 alpha_sums = defaultdict(lambda: args.alpha0 * len(tgt_vocab))
 digamma = lambda x: math.lgamma(x)
-logsumexp = lambda a: math.log(sum(math.exp(i) for i in a))
 
+def logsumexp(probs):
+  m = max(probs)
+  s = sum(math.exp(p - m) for p in probs)
+  return m + math.log(s)
+#logsumexp = lambda a: math.log(sum(math.exp(i) for i in a))
+
+# TODO: I wonder if it's  better to just incrementally update alpha
+# rather than storing new_alpha and only swapping after each iteration...
 for iteration in range(args.iterations):
-  new_alpha = defaultdict(lambda: defaultdict(lambda: args.alpha0))
-  new_alpha_sums = defaultdict(lambda: args.alpha0 * len(tgt_vocab))
-  for src, tgt in zip(src_sents, tgt_sents):
+  print >>sys.stderr, 'Beginning iteration %d' % (iteration + 1)
+  new_alpha = copy.deepcopy(alpha)
+  new_alpha_sums = copy.deepcopy(alpha_sums)
+  for sent_num, (src, tgt) in enumerate(zip(src_sents, tgt_sents)):
+    sys.stderr.write('%d/%d\r' % (sent_num, len(src_sents)))
     for t in tgt:
-      probs = [digamma(alpha[s][t]) - digamma(alpha_sums[s]) for s in src]
+      probs = [digamma(alpha[s][t]) - digamma(alpha_sums[s]) for s in src] 
       prob_sum = logsumexp(probs)
-      if t == 'bleue':
-        print probs
 
       for s, p in zip(src, probs):
         pd = math.exp(p - prob_sum)
         new_alpha[s][t] += pd
         new_alpha_sums[s] += pd
+  print >>sys.stderr, '%d/%d' % (len(src_sents), len(src_sents))
   alpha = new_alpha
   alpha_sums = new_alpha_sums
 
+print >>sys.stderr, 'Done! Dumping ttable...'
 for s, d in alpha.iteritems():
   for t, p in d.iteritems():
-    print '%s ||| %s ||| %f' % (s, t, p / alpha_sums[s])
+    if p != 0.0:
+      print '%s ||| %s ||| %f' % (s, t, math.log(p) - math.log(alpha_sums[s]))
