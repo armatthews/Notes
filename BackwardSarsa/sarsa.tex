@@ -19,8 +19,9 @@
 In the forward view of RL we imagine we're in some state $S_t$, we take some action $a_t$, receive some reward $R_t$,
 and land in some new state $S_{t+1}$.
 
-$\text{TD}(0)$ says that we should update $V(S_t)$ to be equal to $V(S_t) + \alpha (G_t - V(S_t))$ where the \emph{TD target}
+$\text{TD}(0)$ says that we should update $V(S_t)$ to be equal to $V(S_t) + \alpha (G^1_t - V(S_t))$ where the \emph{TD target}
 at step $t$ is $G^1_t = R_t + \gamma V(S_{t+1})$.
+We also will notate $\delta^1_t = G^1_t - V(S_t)$, such that the update becomes $V(S_t) \rightarrow V(S_t) + \alpha\delta^1_t$.
 
 We can, however, also use $n$-step rewards with $n>1$. For example, with $n=2$ we would have
 $G^2_t = R_t + \gamma R_{t+1} + \gamma^2 V(S_{t+2})$.
@@ -32,7 +33,6 @@ weighting with ratio $\lambda$: $G_t = (1-\lambda) \sum_{i=1}^{\infty} \lambda^{
 Note that the extra factor of $1 - \lambda$ serves to normalize the weights such that $(1 - \lambda) \sum_{i=1} \lambda^{i-1} = 1$.
 
 Also note that when an episode ends, the last $G_T$ should receive all remaining weight.
-I need to go back and figure out how this works mathematically.
 If the final reward is $R_{t+k}$ then the last weight should be 1 - $\sum_{i=0}^{k - 1} (1 - \lambda) \lambda^i = \lambda^k$.
 
 This is the forward view of $\text{TD}(\lambda)$.
@@ -40,8 +40,44 @@ It works fine, but it has the problem that we can't do online updates; we must w
 Instead we would like to work out the backward view of the same alrgorithm.
 Instead of updating $V(S_t)$ w.r.t. all the future rewards $R_{t+k}$,
 we instead update all previous states whenever we receive a reward.
-We simply need to work out what the correct update is to each previous state $S_{t -k}$ w.r.t. a current reward $R_t$.
-This should just be simple algebra, so I will work it out here.
+
+To do this we will first begin by considering the update we wish to apply: $V(S_t) \rightarrow V(S_t) + \alpha\big(G_t - V(S_t)\big)$.
+In particular consider the \emph{TD error} $G_t - V(S_t)$.
+For notational convience we will define $G^0_t = V(S_t)$.
+
+\begin{align*}
+G_t - V(S_t) &= (1-\lambda)\sum_{i=1}^\infty \big[\lambda^{i-1} G^i_t \big] - G^0_t \\
+&= -G^0_t + (1 - \lambda)\lambda^0 G^1_t + (1 - \lambda)\lambda^1 G^2_t + (1 - \lambda)\lambda^2 G^3_t + \dots \\
+&= -\lambda^0 G^0_t + (\lambda^0 - \lambda^1) G^1_t + (\lambda^1 - \lambda^2) G^2_t + (\lambda^2 - \lambda^3) G^3_t + \dots \\
+&= \lambda^0(G^1_t - G^0_t) + \lambda^1(G^2_t - G^1_t) + \lambda^2(G^3_t - G^2_t) + \lambda^3(G^4_t - G^3_t) + \dots \\
+&= \sum_{i=1}^\infty \lambda^{i-1}(G^i_t - G^{i-1}_t) \\
+&= \sum_{i=1}^\infty \lambda^{i-1}\bigg[\big(\gamma^i V(S_{t+i}) + \sum_{k=0}^{i - 1} \gamma^k R_{t+k}\big) - \big(\gamma^{i-1} V(S_{t+i-1}) + \sum_{k=0}^{i - 2} \gamma^k R_{t+k}\big) \bigg] \\
+&= \sum_{i=1}^\infty \lambda^{i-1}\bigg[\big(\gamma^i V(S_{t+i}) - \gamma^{i-1} V(S_{t+i-1}) \big) + \big(\sum_{k=0}^{i - 1} \gamma^k R_{t+k} - \sum_{k=0}^{i - 2} \gamma^k R_{t+k}\big) \bigg] \\
+&= \sum_{i=1}^\infty \lambda^{i-1}\bigg[\gamma^{i-1}\big(\gamma V(S_{t+i}) - V(S_{t+i-1}) \big) + \big(\gamma^{i-1} R_{t + i - 1}\big) \bigg] \\
+&= \sum_{i=1}^\infty \lambda^{i-1}\gamma^{i-1}\bigg[\gamma V(S_{t+i}) - V(S_{t+i-1}) + R_{t + i - 1} \bigg] \\
+&= \sum_{i=1}^\infty (\lambda\gamma)^{i-1}\bigg[\big(\gamma V(S_{t+i}) + R_{t + i - 1}\big) - V(S_{t+i-1}) \bigg] \\
+&= \sum_{i=1}^\infty (\lambda\gamma)^{i-1}\delta^1_{t + i - 1} \\
+\end{align*}
+
+This means that at each time step we can simply update $V(s)$ for each previous states $s$ by $(\lambda\gamma)^n\delta^1_t$,
+where $n$ is the number of intervening time steps.
+
+Algorithmically this looks like this:
+\begin{verbatim}
+history = []
+step_count = 0
+while not agent.at_goal():
+  step_count += 1
+  history.append(agent.state())
+  action = agent.choose_action()
+  reward = agent.apply_action(action)
+
+  for i, prev_state in enumerate(history):
+    step_diff = step_count - i
+    V[prev_state] += alpha * pow(lamda * gamma, step_diff) * (reward + gamma * V[agent.state()] - V[history[-1]])
+\end{verbatim}
+
+\section{Old Stuff}
 
 Let's expand the definition of the overall $G_t$:
 

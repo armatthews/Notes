@@ -19,7 +19,7 @@ import sys
 
 possible_actions = ['left', 'right', 'up', 'down']
 alpha = 0.15 # step size
-epsilon = 0.1 # epsilon greedy
+epsilon = 0.2 # epsilon greedy
 gamma = 0.9 # future discounting
 lamda = 0.9 # TD(lambda)
 
@@ -72,6 +72,8 @@ class Agent:
     elif self.y < 0:
       self.y = 0
 
+    return -1
+
   def at_goal(self):
     return self.state() == (7, 3)
 
@@ -90,9 +92,9 @@ while True:
     history.append((agent.state(), action))
     step_count += 1
     print episode, step_count, action
-    agent.apply_action(action)
+    reward = agent.apply_action(action)
 
     greedy_action = max(possible_actions, key=lambda action: agent.qvalues[agent.state(), action])
     for i, (prev_state, prev_action) in enumerate(history):
       step_diff = step_count - i
-      agent.qvalues[prev_state, prev_action] += alpha * math.pow(lamda * gamma, step_diff) * (-1 + gamma * agent.qvalues[agent.state(), greedy_action] - agent.qvalues[history[-1]])
+      agent.qvalues[prev_state, prev_action] += alpha * math.pow(lamda * gamma, step_diff) * (reward + gamma * agent.qvalues[agent.state(), greedy_action] - agent.qvalues[history[-1]])
